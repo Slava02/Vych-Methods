@@ -3,9 +3,13 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"math"
 	"os"
+	"strconv"
 )
+
+var filepath = "C:\\Users\\Слава\\Desktop\\Виртуалка\\Vych Methods\\lab1\\test"
 
 type matrix [][]float64
 type vector []float64
@@ -15,20 +19,43 @@ type linearSystem struct {
 	b vector
 }
 
-var ls = linearSystem{
-	a: [][]float64{
-		{3.0, 2.0, -4.0},
-		{2.0, 3.0, 3.0},
-		{5.0, -3, 1.0},
-	},
-	b: []float64{3.0, 15.0, 14.0},
+func main() {
+	ls2 := parseData()
+	res := SolveSystem(ls2.a, ls2.b)
+	fmt.Println(res)
 }
 
-// SOLUTION: 3 1 2
+func parseData() linearSystem {
+	f, err := os.Open(filepath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err = f.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	s := bufio.NewScanner(f)
+	s.Split(bufio.ScanWords)
+	var size int
+	fmt.Fscan(f, &size)
+	ls := linearSystem{a: make(matrix, size), b: make(vector, size)}
 
-func main() {
-	res := SolveSystem(ls.a, ls.b)
-	fmt.Println(res)
+	for i := 0; i < size; i++ {
+		ls.a[i] = make(vector, size)
+		for j := 0; j < size; j++ {
+			s.Scan()
+			ls.a[i][j], _ = strconv.ParseFloat(s.Text(), 64)
+		}
+		s.Scan()
+		ls.b[i], _ = strconv.ParseFloat(s.Text(), 64)
+	}
+
+	err = s.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ls
 }
 
 // augmentedmatrix creates an augmented matrix from the given matrix and vector.
@@ -84,7 +111,7 @@ func gaussianElimination(a matrix, k, m int) matrix {
 			a[i][j] -= a[k][j] * (a[i][k] / a[k][k])
 		}
 		a[i][k] = 0
-		fmt.Printf("elimanation (%d): \n", i)
+		fmt.Printf("forward elimanation (%d): \n", i)
 		printMatrix(a)
 		bufio.NewReader(os.Stdin).ReadBytes('\n')
 	}
@@ -94,12 +121,21 @@ func gaussianElimination(a matrix, k, m int) matrix {
 // backSubstitution makes backward substitution of jordan-gauss elimination
 func backSubstitution(a matrix, m int) vector {
 	x := make(vector, m)
+	//fmt.Println(x)
 	for i := m - 1; i >= 0; i-- {
 		x[i] = a[i][m]
+		//fmt.Printf("i=%d | x[i] = %.2f ", i, a[i][m])
+		//fmt.Println(x)
 		for j := i + 1; j < m; j++ {
+			//ti, tj := x[i], x[j]
 			x[i] -= a[i][j] * x[j]
+			//fmt.Printf("i=%d , j=%d | %.2f -= %.2f * %.2f | x[i] = %.2f ", i, j, ti, a[i][j], tj, x[i])
+			//fmt.Println(x)
 		}
+		//ti := x[i]
 		x[i] /= a[i][i]
+		//fmt.Printf("i=%d | %.2f /= %.2f | x[i]=%.2f ", i, ti, a[i][i], x[i])
+		//fmt.Println(x)
 	}
 	return x
 }
