@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -11,22 +12,23 @@ import (
 
 var filepath = "C:\\Users\\Слава\\Desktop\\Виртуалка\\Vych Methods\\lab1\\test"
 
-type matrix [][]float64
-type vector []float64
+type Matrix [][]float64
+type Vector []float64
 
 type linearSystem struct {
-	a matrix
-	b vector
+	a Matrix
+	b Vector
 }
 
 func main() {
-	ls2 := parseData()
+	f := openFile(filepath)
+	ls2 := parseData(f)
 	res := SolveSystem(ls2.a, ls2.b)
 	fmt.Println(res)
 }
 
-func parseData() linearSystem {
-	f, err := os.Open(filepath)
+func openFile(name string) *os.File {
+	f, err := os.Open(name)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,14 +37,22 @@ func parseData() linearSystem {
 			log.Fatal(err)
 		}
 	}()
+	return f
+}
+
+func parseData(f io.Reader) linearSystem {
 	s := bufio.NewScanner(f)
+	defer func() {
+		if err := s.Err(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 	s.Split(bufio.ScanWords)
 	var size int
 	fmt.Fscan(f, &size)
-	ls := linearSystem{a: make(matrix, size), b: make(vector, size)}
-
+	ls := linearSystem{a: make(Matrix, size), b: make(Vector, size)}
 	for i := 0; i < size; i++ {
-		ls.a[i] = make(vector, size)
+		ls.a[i] = make(Vector, size)
 		for j := 0; j < size; j++ {
 			s.Scan()
 			ls.a[i][j], _ = strconv.ParseFloat(s.Text(), 64)
@@ -50,21 +60,16 @@ func parseData() linearSystem {
 		s.Scan()
 		ls.b[i], _ = strconv.ParseFloat(s.Text(), 64)
 	}
-
-	err = s.Err()
-	if err != nil {
-		log.Fatal(err)
-	}
 	return ls
 }
 
-// augmentedmatrix creates an augmented matrix from the given matrix and vector.
-func augmentedmatrix(a0 matrix, b0 vector) matrix {
+// augmentedmatrix creates an augmented Matrix from the given Matrix and Vector.
+func augmentedmatrix(a0 Matrix, b0 Vector) Matrix {
 	m := len(b0)
-	a := make(matrix, m)
+	a := make(Matrix, m)
 
 	for i, ai := range a0 {
-		row := make(vector, m+1)
+		row := make(Vector, m+1)
 		copy(row, ai)
 		row[m] = b0[i]
 		a[i] = row
@@ -73,7 +78,7 @@ func augmentedmatrix(a0 matrix, b0 vector) matrix {
 }
 
 // SolveSystem solves given linear equations with Jordan-Gauss method
-func SolveSystem(a0 matrix, b0 vector) vector {
+func SolveSystem(a0 Matrix, b0 Vector) Vector {
 	a := augmentedmatrix(a0, b0)
 	printMatrix(a)
 	for i, _ := range a {
@@ -85,7 +90,7 @@ func SolveSystem(a0 matrix, b0 vector) vector {
 }
 
 // replaceWithMaxRow replaces m[col] row with the one of the underlying rows with the modulo greatest first element.
-func replaceWithMaxRow(m matrix, col int) {
+func replaceWithMaxRow(m Matrix, col int) {
 	maxElem := m[col][col]
 	maxRow := col
 	for i := col + 1; i < len(m[0])-1; i++ {
@@ -105,7 +110,7 @@ func replaceWithMaxRow(m matrix, col int) {
 }
 
 // gaussianElimination makes iteration of jordan-gauss elimination
-func gaussianElimination(a matrix, k, m int) matrix {
+func gaussianElimination(a Matrix, k, m int) Matrix {
 	for i := k + 1; i < m; i++ {
 		for j := k + 1; j <= m; j++ {
 			a[i][j] -= a[k][j] * (a[i][k] / a[k][k])
@@ -119,8 +124,8 @@ func gaussianElimination(a matrix, k, m int) matrix {
 }
 
 // backSubstitution makes backward substitution of jordan-gauss elimination
-func backSubstitution(a matrix, m int) vector {
-	x := make(vector, m)
+func backSubstitution(a Matrix, m int) Vector {
+	x := make(Vector, m)
 	//fmt.Println(x)
 	for i := m - 1; i >= 0; i-- {
 		x[i] = a[i][m]
@@ -140,8 +145,8 @@ func backSubstitution(a matrix, m int) vector {
 	return x
 }
 
-// printMatrix prints given matrix
-func printMatrix(m matrix) {
+// printMatrix prints given Matrix
+func printMatrix(m Matrix) {
 	for i, _ := range m {
 		fmt.Printf("(%d) |", i)
 		for _, col := range m[i] {
