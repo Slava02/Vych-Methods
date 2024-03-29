@@ -140,6 +140,7 @@ func backSubstitution(a matrix, m int) vector {
 	return x
 }
 
+// printMatrix prints given matrix
 func printMatrix(m matrix) {
 	for i, _ := range m {
 		fmt.Printf("(%d) |", i)
